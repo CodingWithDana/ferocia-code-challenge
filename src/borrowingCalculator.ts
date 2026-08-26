@@ -149,8 +149,10 @@ function runConsoleMode(readline = require('readline')) {
     });
 }
 
+/* c8 ignore start */
 if (require.main === module) {
     runConsoleMode();
 }
+/* c8 ignore stop */
 
-module.exports = { calculateBorrowingPower };
+module.exports = { calculateBorrowingPower, getTax, getHEM, runConsoleMode };
