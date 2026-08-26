@@ -98,11 +98,11 @@ I used Postman to manually test the local API while `npm run api` was running. T
 #### Postman
 **Successful request**
 
-Example: retrieving annual tax for an income of `$125,000`.
+Example: retrieving annual tax for an income of `$85,000`.
 ![Successful Postman tax API request](images/postman-successful-tax-request.png)
 
 ### Invalid request
-Example: retrieving HEM value for an income of `$125,000` and `1` dependent.
+Example: retrieving HEM value for an income of `$85,000` and `1` dependent.
 ![Invalid Postman tax API request](images/postman-bad-request.png)
 
 #### curl commands
