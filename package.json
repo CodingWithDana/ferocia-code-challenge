@@ -1,10 +1,14 @@
 {
-  "devDependencies": {
-    "mocha": "^11.7.0"
-  },
   "scripts": {
-    "api": "node server.js",
+    "api": "node --env-file=.env server.js",
     "test": "mocha test_calculator.js",
-    "start": "node borrowingCalculator.js"
+    "typecheck": "tsc --allowJs --checkJs --noEmit --target es2022 --module commonjs --types node src/borrowingCalculator.ts",
+    "start": "node --disable-warning=ExperimentalWarning --env-file=.env src/borrowingCalculator.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "mocha": "^11.7.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
   }
 }

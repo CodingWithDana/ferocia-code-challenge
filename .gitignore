@@ -1,2 +1,11 @@
-node_modules*
+# Dependencies
+/node_modules
+
+# Local environment secrets
+.env
+
+# MacOS files
 .DS_Store
+
+# Coverage files
+/coverage
