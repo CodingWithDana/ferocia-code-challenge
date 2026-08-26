@@ -1,6 +1,7 @@
 import type {
     ApiResponse,
     TaxApiResponse,
+    HemApiResponse,
     Result
 } from "../types/borrowingCalculator";
 
@@ -53,10 +54,12 @@ async function getTax(income: number): Promise<number> {
     return annualTaxFromApi;
 }
 
-function getHEM(income, dependents) {
-    // REPLACE THIS
-    // Write your HEM API call code here.
-    return 2000 + (dependents * 400);
+// Gets the monthly HEM baseline from the local development API
+async function getHEM(income: number, dependents: number): Promise<number> {
+    const responseData = await fetchApiJson<HemApiResponse>("/api/hem", { income, dependents }, "HEM");
+    const baselineHEMFromApi = responseData.hem;
+
+    return baselineHEMFromApi;
 }
 
 // Calculates the total borrowing power amount and the monthly repayment configuration
@@ -72,7 +75,7 @@ async function calculateBorrowingPower(
     const netMonthlyIncome = (income - annualTax) / 12;
 
     // 2. Determine living expenses (User declared expenses vs HEM baseline, whichever is higher)
-    const baselineHEM = getHEM(income, dependents);
+    const baselineHEM = await getHEM(income, dependents);
     const totalLivingExpenses = Math.max(expenses, baselineHEM);
 
     // 3. Calculate credit card liability (~3% of total limits)
@@ -137,6 +140,7 @@ function runConsoleMode(readline = require('readline')) {
                         console.log(`Maximum Borrowing Power at ${assessmentRate}%: $${result.maxLoanAmount.toLocaleString()}`);
                         console.log(`Assumed Monthly Mortgage Repayment: $${result.monthlyRepayment.toLocaleString()} over 30 years`);
                         console.log(`Income Tax: $${result.annualTax.toLocaleString()}`);
+                        console.log(`Household Expense Measure (HEM): $${result.baselineHEM.toLocaleString()}`);
                         
                         rl.close();
                 });

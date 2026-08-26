@@ -9,5 +9,9 @@ export type TaxApiResponse = {
     tax: number;
 };
 
+export type HemApiResponse = {
+    hem: number;
+};
+
 // Restrict each API call to only these two types
 export type ApiResponse = TaxApiResponse | HemApiResponse;
