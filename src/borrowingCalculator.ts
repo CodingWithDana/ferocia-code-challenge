@@ -22,6 +22,7 @@ function getApiToken(): string {
     return apiToken;
 }
 
+// Helper function to handle the API request logic shared by getTax and getHem
 async function fetchApiJson<ResponseType extends ApiResponse>(
     endpoint: string,
     queryParams: Record<string, string | number>,
