@@ -1,76 +1,140 @@
 # Borrowing Power Calculator
 
-Hello and thanks so much for taking the time to do the Ferocia Junior Engineering Code Exercise.
+A command line calculator that estimates a customer's maximum home loan borrowing power for a 30 year home loan. 
 
-This borrowing power calculator written in Javascript was started by one of our juniors, Gen (her full name is “Gen A. Eye”), but she she went on leave before she could finish it…
+It collects annual income, dependants, declared monthly expenses, and credit card limit.
+The calculator requests annual tax and the Household Expenditure Measure (HEM) from a local API, then calculates an estimated borrowing amount using an assessment interest rate.
 
-We need you to progress the code in her absence. Once you’ve submitted your work and we’ve reviewed it, you’ll sit down and explain the code to Gens team members (our interviewers) in a pairing session.
-
-Keep in mind that we’ll expect you to be able to explain and expand on the code you submit.
-
-If you haven’t done much Javascript before don’t worry. We’ll take your experience into account, just give it your best shot. 
-
-You can see our online borrowing power calculator (Gens project is simplified so dont expect the number to match perfectly) to see how it work (https://www.bendigobank.com.au/personal/loans/calculators/borrowing-power/).
-
-## Please try to complete the following:
-
-### Replace the two placeholder functions
-The code needs to calculate tax on income and a HEM (Household Expense Measure) value.
-Currently this is performed by placeholder code in the following functions:
-    getTax(income)
-    getHEM(income, dependents)
-You will need to replace the code in both with API calls.
-We have provided a server.js which can you run locally to expose the following 2 development endpoints:
-    http://localhost:3000/api/tax?income=[income]
-    http://localhost:3000/api/hem?income=[income]&dependents=[dependents]
-Both return JSON and require an authentication header with a valid PAT (Personal Access Token), see server.md for full documentation including the development PAT.
-
-### Make it manageable
-Gen planned to pull all the calculator functions into a class so she could extend it later, but we’ll leave it up to you to choose the approach (a well-formed class, an orchestrator function, a factory/closure pattern, or whatever)
-
-### Test coverage
-Of course we’ll need the test suite to pass and have full coverage.
+This is a simplified borrowing power calculator. Results can be compared with the [Bendigo Bank borrowing-power calculator](https://www.bendigobank.com.au/personal/home-loans/calculators/borrowing-power/), but they are not expected to match exactly.
 
 
+## Technologies
 
-## Rules:
-
-Use whatever tools and resources help you get the job done. That includes AI, documentation, Stack Overflow, or anything else. What matters is that you understand every line you submit. In the follow-up pairing session, we'll ask you to walk us through your code, explain your decisions, and make changes on the fly - without an AI in Agent mode. If you can't do that confidently, it will count against you. The goal isn't to catch you out, it's to understand how you think.
+- Node.js built-in `fetch`, `readline`, and HTTP modules
+- TypeScript
+- Mocha for unit testing
+- C8 for test coverage
+- A local Node.js HTTP API for tax and HEM data (`server.js`)
+- TSX to run TypeScript files in the CommonJS test environment
 
 ## Setup
 
-Make sure you have Node.js installed.
+1. Install dependencies:
 
-Install dependencies:
-```
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-## Server
+2. Create a `.env` file in the project root and set an API token:
+   ```dotenv
+   BORROWING_CALCULATOR_API_TOKEN=replace-with-your-local-token
+   ```
 
-You wil need to run the development API in it's own terminal window.
-(The server will be available at http://localhost:3000/).
-To start the server run the following command:
-```
-npm run api
-```
-Note: You can stop the server with Ctrl+C
+3. In one terminal, start the local API:
+
+   ```bash
+   npm run api
+   ```
+
+4. In another terminal, start the calculator:
+
+   ```bash
+   npm start
+   ```
+
+5. Enter the requested values:
+- gross annual income
+- number of dependants
+- declared monthly expenses
+- total credit card limits
+
+The calculator displays the estimated borrowing power, monthly repayment, annual tax, and HEM value.
+
+Use `Ctrl+C` to stop the API when finished.
 
 
-## Running
+## Run tests
+Run the automated test suite:
 
-Run the calculator with:
-```
-npm start
-```
-
-
-## Testing
-
-Run tests with:
-```
+```bash
 npm test
 ```
+Tests mock fetch and readline, so they do not need the local API server or real terminal input.
 
+To check the TypeScript source without generating output:
 
+```bash
+npm run typecheck
+```
 
+## Run coverage
+
+Generate a coverage report:
+
+```bash
+npm run coverage
+```
+
+The test coverage includes `src/borrowingCalculator.ts`, which contains the calculator code covered by the tests. It excludes `server.js`, which acts as a mock external API for development.
+
+The test suite passes with full coverage for `src/borrowingCalculator.ts`.
+
+## API integration
+The calculator calls the provided local API endpoints to retrieve:
+
+- annual tax: GET `/api/tax?income=<income>`
+- monthly HEM: GET `/api/hem?income=<income>&dependents=<dependents>`
+
+Every request sends `Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN>`. The token is read from the local **.env** file and is never embedded in source code. 
+
+`BORROWING_CALCULATOR_API_BASE_URL` is optional and defaults to http://localhost:3000
+
+If an API request fails, the app uses the error message returned by the API when available. Otherwise, it shows a fallback message including the HTTP status code.
+
+### Manual API testing
+
+I used Postman to manually test the local API while `npm run api` was running. This confirmed that valid requests return the expected JSON response and invalid requests will return corresponding error responses.
+
+#### Postman
+**Successful request**
+
+Example: retrieving annual tax for an income of `$125,000`.
+![Successful Postman tax API request](images/postman-successful-tax-request.png)
+
+### Invalid request
+Example: retrieving HEM value for an income of `$125,000` and `1` dependent.
+![Invalid Postman tax API request](images/postman-bad-request.png)
+
+#### curl commands
+You can also test the tax endpoint using `curl`:
+```bash
+curl -H "Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN>" \
+  "http://localhost:3000/api/tax?income=85000"
+```
+
+## Thought process
+
+I separated the calculator into small functions with one responsibility each:
+- `getTax` requests annual tax.
+- `getHEM` requests the monthly HEM baseline.
+- `fetchApiJson` contains shared API request and error handling logic.
+- `calculateBorrowingPower` combines income, tax, expenses, HEM, and credit card liability.
+- `runConsoleMode` manages terminal prompts and displays the result.
+
+I used TypeScript to type safe API responses and calculator results. The `APIResponse` helper is generic but restricted to the response shapes used by this calculator, which makes the expected data clear at each call.
+
+The unit tests focus on these behaviours: 
+- successful and zero-capacity calculations
+- API requests and errors
+- missing authentication
+- rounding to two decimals
+- console interaction with mocked dependencies
+
+## Assumptions
+- Tax is an annual amount and HEM is a monthly amount.
+- The higher of declared expenses and HEM is used for monthly living expenses.
+- Credit card liability is assessed at 3% of total credit limits per month.
+- The assessment rate is the 7% baseline rate plus a 3% buffer.
+- The loan term is 30 years.
+- The running app makes real requests to the provided local development API.
+- Tests mock API calls so they do not depend on the local API server.
