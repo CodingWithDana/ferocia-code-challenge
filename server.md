@@ -3,12 +3,12 @@
 
 ## Authentication
 
-All requests require a Bearer token (development token = pat_abcdefghijklmnopqrstuvwxyz0123456789) to be passed in the `Authorization` header.
+All requests require the token configured in `.env` as `BORROWING_CALCULATOR_API_TOKEN` to be passed in the `Authorization` header
 
 ### Header format:
 
 ```http
-Authorization: Bearer pat_abcdefghijklmnopqrstuvwxyz0123456789
+Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN>
 ```
 
 ## Endpoints
@@ -25,7 +25,7 @@ Returns the calculated annual income tax.
 #### Example Curl Request
 
 ```
-curl -H "Authorization: Bearer pat_abcdefghijklmnopqrstuvwxyz0123456789" "http://localhost:3000/api/tax?income=125000"
+curl -H "Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN> "http://localhost:3000/api/tax?income=125000"
 ```
 
 #### Success response (200 OK)
@@ -50,7 +50,7 @@ Returns the Household Expenditure Measure (HEM) monthly baseline cost.
 #### Example Curl Request
 
 ```
-curl -H "Authorization: Bearer pat_abcdefghijklmnopqrstuvwxyz0123456789" "http://localhost:3000/api/hem?income=125000&dependents=2"
+curl -H "Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN> "http://localhost:3000/api/hem?income=125000&dependents=2"
 ```
 
 #### Success response (200 OK)
