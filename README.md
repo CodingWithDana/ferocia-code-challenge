@@ -5,19 +5,18 @@ A command line calculator that estimates a customer's maximum home loan borrowin
 It collects annual income, dependants, declared monthly expenses, and credit card limit.
 The calculator requests annual tax and the Household Expenditure Measure (HEM) from a local API, then calculates an estimated borrowing amount using an assessment interest rate.
 
-This is a simplified borrowing power calculator. Results can be compared with the [Bendigo Bank borrowing-power calculator](https://www.bendigobank.com.au/personal/home-loans/calculators/borrowing-power/), but they are not expected to match exactly.
-
+This is a simplified borrowing power calculator.
 
 ## Technologies
 
-- Node.js built-in `fetch`, `readline`, and HTTP modules
+- Node.js 
 - TypeScript
-- Mocha for unit testing
-- C8 for test coverage
-- A local Node.js HTTP API for tax and HEM data (`server.js`)
-- TSX to run TypeScript files in the CommonJS test environment
+- Mocha (unit testing)
+- C8 (test coverage)
+- local Node.js HTTP API (`server.js`)
+- TSX (let JavaScript tests run TypeScript code)
 
-## Setup
+## How to Set Up
 
 1. Install dependencies:
 
@@ -30,7 +29,9 @@ This is a simplified borrowing power calculator. Results can be compared with th
    BORROWING_CALCULATOR_API_TOKEN=replace-with-your-local-token
    ```
 
-3. In one terminal, start the local API:
+## How to Run Application
+
+3. Start the local API:
 
    ```bash
    npm run api
@@ -50,24 +51,21 @@ This is a simplified borrowing power calculator. Results can be compared with th
 
 The calculator displays the estimated borrowing power, monthly repayment, annual tax, and HEM value.
 
-Use `Ctrl+C` to stop the API when finished.
-
-
-## Run tests
-Run the automated test suite:
+## How to Run Tests
+Run the unit tests:
 
 ```bash
 npm test
 ```
-Tests mock fetch and readline, so they do not need the local API server or real terminal input.
 
-To check the TypeScript source without generating output:
+The unit tests focus on these behaviours:
+- borrowing power calculations, including HEM and declared expenses
+- API requests and authentication errors
+- result rounding to two decimals
+- console input, output, and validation prompts
+- handling of unexpected calculation errors
 
-```bash
-npm run typecheck
-```
-
-## Run coverage
+## How to Run Coverage
 
 Generate a coverage report:
 
@@ -75,44 +73,60 @@ Generate a coverage report:
 npm run coverage
 ```
 
-The test coverage includes `src/borrowingCalculator.ts`, which contains the calculator code covered by the tests. It excludes `server.js`, which acts as a mock external API for development.
+## API Integration
 
-The test suite passes with full coverage for `src/borrowingCalculator.ts`.
+```mermaid
+flowchart TD
+    User[User enters required input] --> Calculator[Borrowing Calculator]
+    Env[.env configuration] -->|API token| Calculator
+    Env -->|API base URL<br/>defaults to localhost:3000| Calculator
 
-## API integration
-The calculator calls the provided local API endpoints to retrieve:
+    Calculator --> TaxRequest[GET /api/tax?income=...]
+    Calculator --> HemRequest[GET /api/hem?income=...&dependents=...]
 
-- annual tax: GET `/api/tax?income=<income>`
-- monthly HEM: GET `/api/hem?income=<income>&dependents=<dependents>`
+    TaxRequest -->|Authorization: Bearer token| Api[Local Node.js API]
+    HemRequest -->|Authorization: Bearer token| Api
 
-Every request sends `Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN>`. The token is read from the local **.env** file and is never embedded in source code. 
+    Api -->|Tax response| Calculator
+    Api -->|HEM response| Calculator
 
-`BORROWING_CALCULATOR_API_BASE_URL` is optional and defaults to http://localhost:3000
+    Calculator -->|Success| Result[Display borrowing power summary]
+    Api -->|401 Unauthorized| TokenError[Explain token is incorrect and exit]
+    Api -->|Other API error| ApiError[Display API error or fallback message]
 
-If an API request fails, the app uses the error message returned by the API when available. Otherwise, it shows a fallback message including the HTTP status code.
+    classDef user fill:#E8F1FF,stroke:#2563EB,color:#111827;
+    classDef app fill:#EAF8EF,stroke:#16A34A,color:#111827;
+    classDef api fill:#FFF4E5,stroke:#EA580C,color:#111827;
+    classDef error fill:#FEECEC,stroke:#DC2626,color:#111827;
 
-### Manual API testing
+    class User,Env user;
+    class Calculator,Result app;
+    class TaxRequest,HemRequest,Api api;
+    class TokenError,ApiError error;
+```
+
+### API Testing
 
 I used Postman to manually test the local API while `npm run api` was running. This confirmed that valid requests return the expected JSON response and invalid requests will return corresponding error responses.
 
 #### Postman
-**Successful request**
+**Successful Request**
 
 Example: retrieving annual tax for an income of `$85,000`.
 ![Successful Postman tax API request](images/postman-successful-tax-request.png)
 
-### Invalid request
+### Invalid Request
 Example: retrieving HEM value for an income of `$85,000` and `1` dependent.
 ![Invalid Postman tax API request](images/postman-bad-request.png)
 
-#### curl commands
+#### `curl` Commands
 You can also test the tax endpoint using `curl`:
 ```bash
 curl -H "Authorization: Bearer <BORROWING_CALCULATOR_API_TOKEN>" \
   "http://localhost:3000/api/tax?income=85000"
 ```
 
-## Thought process
+## Thought Process
 
 I separated the calculator into small functions with one responsibility each:
 - `getTax` requests annual tax.
@@ -122,13 +136,6 @@ I separated the calculator into small functions with one responsibility each:
 - `runConsoleMode` manages terminal prompts and displays the result.
 
 I used TypeScript to type safe API responses and calculator results. The `APIResponse` helper is generic but restricted to the response shapes used by this calculator, which makes the expected data clear at each call.
-
-The unit tests focus on these behaviours: 
-- successful and zero-capacity calculations
-- API requests and errors
-- missing authentication
-- rounding to two decimals
-- console interaction with mocked dependencies
 
 ## Assumptions
 - Tax is an annual amount and HEM is a monthly amount.
