@@ -80,6 +80,20 @@ describe('Borrowing Power Calculator Tests', () => {
     );
   });
 
+  // Checks that an unauthorized response tells the user to update their local token.
+  it('should explain how to fix an invalid API token', async () => {
+    global.fetch = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Invalid Personal Access Token' })
+    });
+
+    await assert.rejects(
+      getTax(120000),
+      /API token is incorrect\. Please check and try again\./
+    );
+  });
+
   // Checks that getTax uses a fallback message when an error response is not JSON
   it('should throw a fallback error when the tax API error response is not JSON', async () => {
     global.fetch = async () => ({
@@ -225,5 +239,120 @@ describe('Borrowing Power Calculator Tests', () => {
       'Income Tax: $24,000',
       'Household Expense Measure (HEM): $3,100'
     ]);
+  });
+
+  // Checks that console will ask users to reenter if they didn't enter valid input
+  it('should ask again when console input is not a valid number', async () => {
+    const answers = ['85000.5', '85000', '1.5', '1', 'four thousands', '4000.25', '0.5', '0'];
+    const prompts = [];
+    const output = [];
+    let closed = false;
+    const readline = {
+      createInterface: () => ({
+        question: (prompt, callback) => {
+          prompts.push(prompt);
+          callback(answers.shift());
+        },
+        close: () => { closed = true; }
+      })
+    };
+    const originalConsoleLog = console.log;
+    console.log = (message) => output.push(message);
+
+    try {
+      runConsoleMode(readline);
+      await new Promise((resolve) => setImmediate(resolve));
+    } finally {
+      console.log = originalConsoleLog;
+    }
+
+    assert.deepStrictEqual(prompts, [
+      'Gross Annual Income: $',
+      'Gross Annual Income: $',
+      'Number of Dependents: ',
+      'Number of Dependents: ',
+      'Declared Monthly Expenses: $',
+      'Declared Monthly Expenses: $',
+      'Total Credit Card Limits: $',
+      'Total Credit Card Limits: $'
+    ]);
+    assert.ok(output.includes('Please enter a whole number of zero or more for gross annual income'));
+    assert.ok(output.includes('Please enter a number of zero or more for declared monthly expenses'));
+    assert.strictEqual(closed, true);
+  });
+
+  // Checks that an API request without valid token closes the console and returns the reason message
+  it('should close the console and explain an invalid API token', async () => {
+    global.fetch = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Invalid Personal Access Token' })
+    });
+    const answers = ['120000', '2', '3000', '10000'];
+    const errors = [];
+    let closed = false;
+    const readline = {
+      createInterface: () => ({
+        question: (_prompt, callback) => callback(answers.shift()),
+        close: () => { closed = true; }
+      })
+    };
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalExitCode = process.exitCode;
+    console.log = () => {};
+    console.error = (message) => errors.push(message);
+
+    try {
+      runConsoleMode(readline);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      assert.strictEqual(closed, true);
+      assert.deepStrictEqual(errors, [
+        'Unable to calculate borrowing power: API token is incorrect. Update BORROWING_CALCULATOR_API_TOKEN in .env and restart the calculator.'
+      ]);
+      assert.strictEqual(process.exitCode, 1);
+    } finally {
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+      if (originalExitCode === undefined) {
+        delete process.exitCode;
+      } else {
+        process.exitCode = originalExitCode;
+      }
+    }
+  });
+
+  // Checks that the console still closes cleanly if an unexpected error has no message.
+  it('should show a fallback message for an unknown calculation error', async () => {
+    global.fetch = async () => { throw 'unexpected failure'; };
+    const answers = ['120000', '2', '3000', '10000'];
+    const errors = [];
+    const readline = {
+      createInterface: () => ({
+        question: (_prompt, callback) => callback(answers.shift()),
+        close: () => {}
+      })
+    };
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalExitCode = process.exitCode;
+    console.log = () => {};
+    console.error = (message) => errors.push(message);
+
+    try {
+      runConsoleMode(readline);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      assert.deepStrictEqual(errors, ['Unable to calculate borrowing power: Unknown calculation error']);
+    } finally {
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+      if (originalExitCode === undefined) {
+        delete process.exitCode;
+      } else {
+        process.exitCode = originalExitCode;
+      }
+    }
   });
 });
