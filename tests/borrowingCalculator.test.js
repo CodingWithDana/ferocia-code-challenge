@@ -226,4 +226,42 @@ describe('Borrowing Power Calculator Tests', () => {
       'Household Expense Measure (HEM): $3,100'
     ]);
   });
+
+  // Checks that console will ask users to reenter if they didn't enter valid input
+  it('should ask again when console input is not a valid number', async () => {
+    const answers = ['85000.5', '85000', '1.5', 'four thousands', '4000.25', '0.5'];
+    const prompts = [];
+    const output = [];
+    let closed = false;
+    const readline = {
+      createInterface: () => ({
+        question: (prompt, callback) => {
+          prompts.push(prompt);
+          callback(answers.shift());
+        },
+        close: () => { closed = true; }
+      })
+    };
+    const originalConsoleLog = console.log;
+    console.log = (message) => output.push(message);
+
+    try {
+      runConsoleMode(readline);
+      await new Promise((resolve) => setImmediate(resolve));
+    } finally {
+      console.log = originalConsoleLog;
+    }
+
+    assert.deepStrictEqual(prompts, [
+      'Gross Annual Income: $',
+      'Gross Annual Income: $',
+      'Number of Dependents: ',
+      'Declared Monthly Expenses: $',
+      'Declared Monthly Expenses: $',
+      'Total Credit Card Limits: $'
+    ]);
+    assert.ok(output.includes('Please enter a whole number of zero or more for gross annual income.'));
+    assert.ok(output.includes('Please enter a number of zero or more for declared monthly expenses.'));
+    assert.strictEqual(closed, true);
+  });
 });

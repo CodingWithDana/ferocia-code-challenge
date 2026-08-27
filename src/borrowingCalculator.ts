@@ -109,6 +109,30 @@ async function calculateBorrowingPower(
     };
 }
 
+// Repeats a console prompt until the user provides a valid non-negative number.
+function promptForNumber(
+    rl: { question: (prompt: string, callback: (answer: string) => void) => void },
+    prompt: string,
+    fieldName: string,
+    wholeNumber: boolean,
+    onValidAnswer: (value: number) => void
+) {
+    rl.question(prompt, (answer: string) => {
+        const value = Number(answer.trim());
+        const isValid = answer.trim() !== "" && Number.isFinite(value) && value >= 0 &&
+            (!wholeNumber || Number.isInteger(value));
+
+        if (!isValid) {
+            const expectedValue = wholeNumber ? "a whole number" : "a number";
+            console.log(`Please enter ${expectedValue} of zero or more for ${fieldName}`);
+            promptForNumber(rl, prompt, fieldName, wholeNumber, onValidAnswer);
+            return;
+        }
+
+        onValidAnswer(value);
+    });
+}
+
 // Runs the interactive calculator in a terminal
 function runConsoleMode(readline = require('readline')) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -116,33 +140,29 @@ function runConsoleMode(readline = require('readline')) {
     console.log("Mortgage Borrowing Power Calculator");
     console.log("===================================");
 
-        rl.question("Gross Annual Income: $", (income: string) => {
-            rl.question("Number of Dependents: ", (dependents: string) => {
-                rl.question("Declared Monthly Expenses: $", (expenses: string) => {
-                    rl.question("Total Credit Card Limits: $",  async (creditLimits: string) => {
-                        const incomeNumber = parseFloat(income);
-                        const dependentsNumber = parseInt(dependents, 10);
-                        const expensesNumber = parseFloat(expenses);
-                        const creditLimitsNumber = parseFloat(creditLimits);
+    promptForNumber(rl, "Gross Annual Income: $", "gross annual income", true, (income) => {
+        promptForNumber(rl, "Number of Dependents: ", "number of dependents", true, (dependents) => {
+            promptForNumber(rl, "Declared Monthly Expenses: $", "declared monthly expenses", false, (expenses) => {
+                promptForNumber(rl, "Total Credit Card Limits: $", "total credit card limits", true, async (creditLimits) => {
 
-                        // Banks assess loans using base rate + buffer for safety
-                        const assessmentRate = INTEREST_RATE + ASSESSMENT_RATE_BUFFER;
+                    // Banks assess loans using base rate + buffer for safety
+                    const assessmentRate = INTEREST_RATE + ASSESSMENT_RATE_BUFFER;
 
-                        const result = await calculateBorrowingPower(
-                            incomeNumber,
-                            dependentsNumber,
-                            expensesNumber,
-                            creditLimitsNumber,
-                            assessmentRate
-                        );
+                    const result = await calculateBorrowingPower(
+                        income,
+                        dependents,
+                        expenses,
+                        creditLimits,
+                        assessmentRate
+                    );
 
-                        console.log("\n--- Calculation Summary ---");
-                        console.log(`Maximum Borrowing Power at ${assessmentRate}%: $${result.maxLoanAmount.toLocaleString()}`);
-                        console.log(`Assumed Monthly Mortgage Repayment: $${result.monthlyRepayment.toLocaleString()} over 30 years`);
-                        console.log(`Income Tax: $${result.annualTax.toLocaleString()}`);
-                        console.log(`Household Expense Measure (HEM): $${result.baselineHEM.toLocaleString()}`);
-                        
-                        rl.close();
+                    console.log("\n--- Calculation Summary ---");
+                    console.log(`Maximum Borrowing Power at ${assessmentRate}%: $${result.maxLoanAmount.toLocaleString()}`);
+                    console.log(`Assumed Monthly Mortgage Repayment: $${result.monthlyRepayment.toLocaleString()} over 30 years`);
+                    console.log(`Income Tax: $${result.annualTax.toLocaleString()}`);
+                    console.log(`Household Expense Measure (HEM): $${result.baselineHEM.toLocaleString()}`);
+
+                    rl.close();
                 });
             });
         });
