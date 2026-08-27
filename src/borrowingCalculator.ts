@@ -16,7 +16,7 @@ const API_BASE_URL = process.env.BORROWING_CALCULATOR_API_BASE_URL;
 
 // Reads the API token at run time so API token never stored in source code
 function getApiToken(): string {
-    const apiToken = process.env.BORROWING_CALCULATOR_API_TOKEN;
+    const apiToken = process.env.BORROWING_CALCULATOR_API_TOKEN?.trim();
     if (!apiToken) {
         throw new Error("BORROWING_CALCULATOR_API_TOKEN is required");
     }
@@ -39,6 +39,10 @@ async function fetchApiJson<ResponseType extends ApiResponse>(
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error("API token is incorrect. Please check and try again.");
+        }
+
         const error = await response.json().catch(() => ({})) as { message?: string };
         throw new Error(error.message || `${apiName} API request failed with status ${response.status}`);
     }
@@ -148,21 +152,27 @@ function runConsoleMode(readline = require('readline')) {
                     // Banks assess loans using base rate + buffer for safety
                     const assessmentRate = INTEREST_RATE + ASSESSMENT_RATE_BUFFER;
 
-                    const result = await calculateBorrowingPower(
-                        income,
-                        dependents,
-                        expenses,
-                        creditLimits,
-                        assessmentRate
-                    );
+                    try {
+                        const result = await calculateBorrowingPower(
+                            income,
+                            dependents,
+                            expenses,
+                            creditLimits,
+                            assessmentRate
+                        );
 
-                    console.log("\n--- Calculation Summary ---");
-                    console.log(`Maximum Borrowing Power at ${assessmentRate}%: $${result.maxLoanAmount.toLocaleString()}`);
-                    console.log(`Assumed Monthly Mortgage Repayment: $${result.monthlyRepayment.toLocaleString()} over 30 years`);
-                    console.log(`Income Tax: $${result.annualTax.toLocaleString()}`);
-                    console.log(`Household Expense Measure (HEM): $${result.baselineHEM.toLocaleString()}`);
-
-                    rl.close();
+                        console.log("\n--- Calculation Summary ---");
+                        console.log(`Maximum Borrowing Power at ${assessmentRate}%: $${result.maxLoanAmount.toLocaleString()}`);
+                        console.log(`Assumed Monthly Mortgage Repayment: $${result.monthlyRepayment.toLocaleString()} over 30 years`);
+                        console.log(`Income Tax: $${result.annualTax.toLocaleString()}`);
+                        console.log(`Household Expense Measure (HEM): $${result.baselineHEM.toLocaleString()}`);
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : "Unknown calculation error";
+                        console.error(`Unable to calculate borrowing power: ${message}`);
+                        process.exitCode = 1;
+                    } finally {
+                        rl.close();
+                    }
                 });
             });
         });
@@ -170,8 +180,16 @@ function runConsoleMode(readline = require('readline')) {
 }
 
 /* c8 ignore start */
+// Validate required configuration before starting the interactive calculator.
 if (require.main === module) {
-    runConsoleMode();
+    try {
+        getApiToken();
+        runConsoleMode();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown configuration error";
+        console.error(`Unable to start the calculator: ${message}`);
+        process.exitCode = 1;
+    }
 }
 /* c8 ignore stop */
 
