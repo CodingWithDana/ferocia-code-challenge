@@ -308,9 +308,7 @@ describe('Borrowing Power Calculator Tests', () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       assert.strictEqual(closed, true);
-      assert.deepStrictEqual(errors, [
-        'Unable to calculate borrowing power: API token is incorrect. Update BORROWING_CALCULATOR_API_TOKEN in .env and restart the calculator.'
-      ]);
+      assert.deepStrictEqual(errors, ['Unable to calculate borrowing power: API token is incorrect. Please check and try again.']);
       assert.strictEqual(process.exitCode, 1);
     } finally {
       console.log = originalConsoleLog;
